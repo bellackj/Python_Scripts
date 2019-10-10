@@ -1,0 +1,17 @@
+import boto3 
+from csv import DictWriter
+
+client = boto3.client('ec2')
+response = client.describe_tags(Filters=[{'Name': 'resource-type', 'Values': ['instance']}])
+
+instanceInfo = []
+print(response['Tags'])
+for x in response['Tags']:
+    x.pop('Key')
+    x.pop('ResourceType')
+    instanceInfo.append(x)
+
+with open('EC2InstanceTags.csv','w', newline='') as outfile:
+    writer = DictWriter(outfile, ('ResourceId', 'Value'))
+    writer.writeheader()
+    writer.writerows(instanceInfo)
