@@ -1,0 +1,23 @@
+import boto3
+from csv import DictWriter
+
+client = boto3.client('iam')
+response = client.list_roles()
+IAMroleInfo = []
+
+for roleData in response['Roles']:
+    roleData.pop('Path')
+    roleData.pop('CreateDate')
+    roleData.pop('AssumeRolePolicyDocument')
+    if 'Description' in roleData:
+            roleData.pop('Description')
+    roleData.pop('MaxSessionDuration')
+    IAMroleInfo.append(roleData)
+    #roleName = i['RoleName']
+    #roleId = i['RoleId']
+    
+
+with open('IAMRoles.csv','w', newline='') as outfile:
+    writer = DictWriter(outfile, ('RoleName', 'RoleId', 'Arn'))
+    writer.writeheader()
+    writer.writerows(IAMroleInfo)
