@@ -1,0 +1,49 @@
+import boto3
+import time
+import calendar
+from datetime import datetime
+import json
+
+# Get ID's of running instances
+ec2 = boto3.resource('ec2')
+instances = ec2.instances.filter(
+    Filters=[{'Name': 'instance-state-name', 'Values': ['running']}])
+for instance in instances:
+    instanceID = instance.id
+    
+# Get all Log Group names in account
+    client = boto3.client('logs')
+    response = client.describe_log_groups()
+    for logGroup in response["logGroups"]:
+        logGroupName = logGroup["logGroupName"]
+
+# Get LogStreams from LogGroups that start with "PROD"
+        if logGroupName.startswith( 'PROD' ):
+            newResponse = client.describe_log_streams(logGroupName=str(logGroupName))
+            for logStreams in newResponse["logStreams"]:
+                logStreamName = logStreams["logStreamName"]
+                if logStreamName == instanceID:
+
+# Get timestamp of most recent log        
+                    try:
+                        lastTimeStamp = logStreams["lastIngestionTime"]
+                        lastTimeStamp = str(lastTimeStamp)
+                        lastTimeStamp = lastTimeStamp[:-3]
+                    except KeyError:
+                        continue
+                
+# Compare current time and time of most recent log stream
+                    current = calendar.timegm(time.gmtime())
+                    timeDiff = int(current) - int(lastTimeStamp)
+                    if timeDiff >= 60 and timeDiff <= 36000:
+                        sns = boto3.client('sns')
+                        dt_object = datetime.fromtimestamp(int(lastTimeStamp))           
+
+# Send notification to SNS topic
+                        response = sns.publish(
+                            TopicArn='arn:aws:sns:us-east-1:728021215073:NotifyMe',    
+                            Message="The EC2 instance with ID: "+str(logStreamName)+" from logGroup: "+str(logGroupName)+" has not sent logs since: "+str(dt_object),    
+                            )
+                        print(response)
+
+  
