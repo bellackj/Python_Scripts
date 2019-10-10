@@ -1,0 +1,39 @@
+import boto3
+import json
+import re
+
+client = boto3.client('ec2')
+response = client.describe_tags(Filters=[{'Name': 'key','Values': ['<assigned Tag>']},])
+
+for i in response["Tags"]:
+    resource = i["ResourceId"]
+    os = i["Value"]
+    if os == '<Tag Value>' and resource.startswith("i-"):
+        client = boto3.client('ssm')
+        association = client.create_association(
+            Name='AWS-RunInspecChecks',
+            Parameters={
+                'sourceType': [
+                    'S3'
+                ],
+                'sourceInfo': [
+                    "{\"path\":\"https://<path to controls>\"}"
+                ],
+            },
+            Targets=[
+                {
+                    'Key': 'InstanceIds',
+                    'Values': [
+                        str(resource),
+                    ]
+                },
+            ],
+            AssociationName='RHEL7STIGControls',
+            ComplianceSeverity='CRITICAL'and'HIGH'and'MEDIUM'and'LOW'and'UNSPECIFIED'
+        )
+        association
+
+
+
+
+
