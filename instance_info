@@ -1,0 +1,18 @@
+import boto3
+from csv import DictWriter
+
+client = boto3.client('ssm')
+response = client.describe_instance_information()
+
+instanceInfo = []
+for i in response['InstanceInformationList']:
+    i.pop('PingStatus')
+    i.pop('LastPingDateTime')
+    i.pop('AgentVersion')
+    i.pop('IsLatestVersion')
+    instanceInfo.append(i)
+
+with open('EC2InstanceInformation.csv','w') as outfile:
+    writer = DictWriter(outfile, ('InstanceId','PlatformType','PlatformName', 'PlatformVersion', 'ResourceType', 'IPAddress', 'ComputerName', 'AssociationOverview', 'LastAssociationExecutionDate', 'LastSuccessfulAssociationExecutionDate', 'AssociationStatus'))
+    writer.writeheader()
+    writer.writerows(instanceInfo)
