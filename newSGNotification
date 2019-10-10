@@ -1,0 +1,46 @@
+import boto3
+import datetime
+import json
+    
+# Set time parameters for creation of New Security Group
+endTime = datetime.datetime.utcnow()
+compTime = datetime.timedelta(minutes=45)
+startTime = endTime - compTime
+
+# Get event from CloudTrail 
+client = boto3.client('cloudtrail')
+response = client.lookup_events(
+    LookupAttributes=[
+        {
+            'AttributeKey': 'EventName',
+            'AttributeValue': 'CreateSecurityGroup'
+        }
+    ],
+    StartTime = startTime,
+    EndTime = endTime
+)
+
+# Isolate CloudTrailEvent as a dictionary to pull variables
+for i in response['Events']:
+    cloudTrail = i['CloudTrailEvent']
+    cloudDict = json.loads(cloudTrail)
+
+# Get variables for SNS message from created dictionary
+    for item in cloudDict:
+        time = cloudDict['eventTime']
+        userinfo = cloudDict['userIdentity']
+        for info in userinfo:
+            user = userinfo['userName']
+        SGinfo = cloudDict['requestParameters']
+        for items in SGinfo:
+            sgName = SGinfo['groupName']
+            vpc = SGinfo['vpcId']
+
+# Send message to SNS topic alerting of a new Security Group
+    sns = boto3.client('sns')
+    message = sns.publish(
+    TopicArn='<arn of SNS Topic>',    
+    Message="A new Security Group, " + sgName + " has been created by the user: " + user + " at " + time + " in VPC: " + vpc +\
+            ". If this is not authorized, pleased take immediate action."    
+        )
+    print(message)
