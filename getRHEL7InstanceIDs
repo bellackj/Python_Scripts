@@ -1,0 +1,19 @@
+import boto3
+import re
+
+client = boto3.client('ssm')
+response = client.describe_instance_information()
+
+for i in response['InstanceInformationList']:
+    instanceId = i['InstanceId']
+    os = i['PlatformType']
+    version = i['PlatformName']
+    versionName = re.match(r'Red Hat Enterprise Linux (.*)', version)
+    release = i['PlatformVersion']
+    releaseNum = re.match(r'7.(.*)', release)
+    if versionName and releaseNum:
+        version = versionName.group()
+        release = releaseNum.group()
+        if os == 'Linux' and version == 'Red Hat Enterprise Linux Server' and release >= '7.0':
+            
+        
