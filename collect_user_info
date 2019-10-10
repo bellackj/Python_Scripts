@@ -1,0 +1,119 @@
+import boto3
+from datetime import datetime, timezone
+import csv
+from csv import DictWriter
+
+client = boto3.client('iam')
+response = client.list_users()
+
+#Create lists to populate with information from credential report
+userInformation = []
+passwordAge = []
+passDays = []
+mfaStatus = []
+userActivity = []
+loginDays = []
+
+#Generate and pull down IAM credential report into .csv file for parsing
+client.generate_credential_report()
+credential_report = client.get_credential_report()
+
+with open('credential_report.csv') as file:
+    reader = csv.DictReader(file)
+    for row in reader:
+        lastPassDate = row['password_last_changed']
+        passwordAge.append(lastPassDate)
+
+with open('credential_report.csv') as file:
+    reader = csv.DictReader(file)
+    for row in reader:
+        mfaEnabled = row['mfa_active']
+        mfaStatus.append(mfaEnabled)
+
+with open('credential_report.csv') as file:
+    reader = csv.DictReader(file)
+    for row in reader:
+        lastLogin = row['password_last_used']
+        userActivity.append(lastLogin)
+
+#Populate ageOfPass list with number of days since password was changed. 
+for i in passwordAge:
+    if i == 'not_supported' or i == 'N/A':
+        passAge = 'No Password Assigned'
+    else:
+        i = i[:-6]
+        date_time_obj = datetime.strptime(i, '%Y-%m-%dT%H:%M:%S')
+        age_of_password = datetime.now() - date_time_obj
+        passAge = age_of_password.days
+    passDays.append(passAge)
+
+for i in userActivity:
+    if i == 'no_information' or i == 'N/A':
+        loginAge = 'No Password Assigned'
+    else:
+        i = i[:-6]
+        date_time_obj = datetime.strptime(i, '%Y-%m-%dT%H:%M:%S')
+        age_of_login =  datetime.now() - date_time_obj
+        loginAge = age_of_login.days
+    loginDays.append(loginAge)
+
+#Remove default user information from lists
+del loginDays[0]
+del passDays[0]
+del mfaStatus[0]
+
+#Remove unneeded information from IAM Credential report
+for userInfo in response['Users']:
+    userInfo.pop('Path')
+    userInfo.pop('Arn')
+    userInfo.pop('CreateDate')
+    if 'PasswordLastUsed' in userInfo:
+        userInfo.pop('PasswordLastUsed')
+    
+#Get age of Access Key from IAM list_users method
+    userName = userInfo['UserName']
+    keyResponse = client.list_access_keys(UserName=userName)
+    keyInfo = keyResponse['AccessKeyMetadata']
+    
+    if len(keyInfo) == 0:
+        age = 'No Key'
+    else:
+        for x in keyInfo:      
+            if 'CreateDate' in x:
+                keyDate = x['CreateDate']  
+                age_of_keys = datetime.now(timezone.utc) - keyDate
+                age = age_of_keys.days
+
+#Create key/value pairs for userInfo dictionary to be sent to csv writer.         
+    userInfo['Access_Key_Age'] = age
+    userInfo['Password_Age'] = passDays[0]
+    userInfo['User_Last_Login'] = loginDays[0]
+    userInfo['MFA_Active'] = mfaStatus[0]
+
+    del passDays[0]
+    del loginDays[0]
+    del mfaStatus[0]     
+    userInformation.append(userInfo)
+
+#Create .csv file with needed column headers.
+with open('ProdVPCUserAudit.csv','w', newline='') as outfile:
+    writer = DictWriter(outfile, ('UserName', 'UserId','Access_Key_Age', 'Password_Age', 'User_Last_Login', 'MFA_Active'))
+    writer.writeheader()
+    writer.writerows(userInformation)
+
+
+
+
+
+    
+        
+
+
+
+
+
+
+
+   
+
+        
