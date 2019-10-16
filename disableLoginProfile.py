@@ -27,43 +27,24 @@ for row in reader:
     credential_report.append(row)
 
 
-with open('credential_report.csv','w', newline='') as outfile:
-    writer = DictWriter(outfile, ('user','arn', 'user_creation_time', 'password_enabled', 'password_last_used', 'password_last_changed', 'password_next_rotation', 'mfa_active', \
-        'access_key_1_active', 'access_key_1_last_rotated', 'access_key_1_last_used_date', 'access_key_1_last_used_region', 'access_key_1_last_used_service', \
-        'access_key_2_active', 'access_key_2_last_rotated', 'access_key_2_last_used_date', 'access_key_2_last_used_region', 'access_key_2_last_used_service', \
-        'cert_1_active', 'cert_1_last_rotated', 'cert_2_active', 'cert_2_last_rotated'))
-    writer.writeheader()
-    writer.writerows(credential_report)
+#Populate lists from credential report dictionary
+for data in credential_report:
+    lastPassDate = data['password_last_changed']
+    passwordAge.append(lastPassDate)
 
+    mfaEnabled = data['mfa_active']
+    mfaStatus.append(mfaEnabled)
 
-with open('credential_report.csv') as file:
-    reader = csv.DictReader(file)
-    for row in reader:
-        lastPassDate = row['password_last_changed']
-        passwordAge.append(lastPassDate)
+    lastLogin = data['password_last_used']
+    userActivity.append(lastLogin)
 
-with open('credential_report.csv') as file:
-    reader = csv.DictReader(file)
-    for row in reader:
-        mfaEnabled = row['mfa_active']
-        mfaStatus.append(mfaEnabled)
+    keyAge = data['access_key_1_last_rotated']
+    accessKeyAge.append(keyAge)        
 
-with open('credential_report.csv') as file:
-    reader = csv.DictReader(file)
-    for row in reader:
-        lastLogin = row['password_last_used']
-        userActivity.append(lastLogin)
-
-with open('credential_report.csv') as file:
-    reader = csv.DictReader(file)
-    for row in reader:
-        keyAge = row['access_key_1_last_rotated']
-        accessKeyAge.append(keyAge)
-
-#Populate lists with number of days since credentials have changed. 
+#Populate lists with number of days since credentials have changed. Using 91 for invalid entries in order to disable login profile. 
 for i in passwordAge:
     if i == 'not_supported' or i == 'N/A':
-        passAge = 'No Password Assigned'
+        passAge = 91
     else:
         i = i[:-6]
         date_time_obj = datetime.strptime(i, '%Y-%m-%dT%H:%M:%S')
@@ -73,7 +54,7 @@ for i in passwordAge:
 
 for i in userActivity:
     if i == 'no_information' or i == 'N/A':
-        loginAge = 'No Password Assigned'
+        loginAge = 91
     else:
         i = i[:-6]
         date_time_obj = datetime.strptime(i, '%Y-%m-%dT%H:%M:%S')
@@ -83,7 +64,7 @@ for i in userActivity:
 
 for i in accessKeyAge:
     if i == 'N/A':
-        keyDays = 'No Keys Assigned'
+        keyDays = 91
     else:
         i = i[:-6]
         date_time_obj = datetime.strptime(i, '%Y-%m-%dT%H:%M:%S')
@@ -121,11 +102,10 @@ for userInfo in userResponse['Users']:
     del keyDaysAge[0]    
     userInformation.append(userInfo)
 
-
 #Check age of credentials and disable user login if credentials are not up to date.
 for userData in userInformation:
-    if int(userData['Access_Key_Age']) > 90 or \
-        int(userData['Password_Age']) > 90 or \
+    if userData['Access_Key_Age'] > 90 or \
+        userData['Password_Age'] > 90 or \
         userData['User_Last_Login'] > 90 or\
         userData['MFA_Active'] == 'false':
         try:
