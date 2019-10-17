@@ -119,7 +119,7 @@ for userData in userInformation:
 # Send notification to SNS topic
         sns = boto3.client('sns')
         response = sns.publish(
-        TopicArn='arn:aws:sns:us-east-1:001395329297:NotifyMe',    
+        TopicArn='<topic ARN>',    
         Message="The Access Key for user " + userData['UserName'] + " is older than 90 days. Please rotate the users access key and notify them of the change."
         )
         print(response)
