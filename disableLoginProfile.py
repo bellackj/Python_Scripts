@@ -2,6 +2,7 @@ import boto3
 from datetime import datetime, timezone
 import csv
 from csv import DictWriter
+from time import sleep 
 
 client = boto3.client('iam')
 response = client.list_users()
@@ -19,12 +20,21 @@ credential_info = []
 
 #Generate and pull down IAM credential report into .csv file for parsing
 resp1 = client.generate_credential_report()
-response = client.get_credential_report()
-credential_report = []
-reportText=response['Content'].decode("utf-8").splitlines()
-reader = csv.DictReader(reportText, delimiter=',')
-for row in reader:
-    credential_report.append(row)
+if resp1['State'] == 'COMPLETE':
+    response = client.get_credential_report()
+    reportText=response['Content'].decode("utf-8").splitlines()
+    reader = csv.DictReader(reportText, delimiter=',')
+    credential_report = []
+    for row in reader:
+        credential_report.append(row)
+else:
+    sleep(2)
+    response = client.get_credential_report()
+    reportText=response['Content'].decode("utf-8").splitlines()
+    reader = csv.DictReader(reportText, delimiter=',')
+    credential_report = []
+    for row in reader:
+        credential_report.append(row)
 
 
 #Populate lists from credential report dictionary
