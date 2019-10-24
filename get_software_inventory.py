@@ -7,7 +7,7 @@ ec2 = boto3.resource('ec2')
 s3 = boto3.client('s3')
 
 # Get instance-Ids from Prod VPC info list
-response = ec2.instances.filter(Filters=[{'Name': 'vpc-id', 'Values': ['vpc-099b436e86f46bef3']}])
+response = ec2.instances.filter(Filters=[{'Name': 'vpc-id', 'Values': ['vpc-b585d8d0']}])
 instances = []
 
 for i in response:
