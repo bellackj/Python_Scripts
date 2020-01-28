@@ -2,7 +2,7 @@ import boto3
 from csv import DictWriter
 
 client = boto3.client('ec2')
-response = client.describe_instances(Filters=[{'Name': 'vpc-id', 'Values': ['vpc-b585d8d0']}])
+response = client.describe_instances(Filters=[{'Name': 'vpc-id', 'Values': ['<VPC_ID>']}])
 instanceInfo = []
 
 for x in response['Reservations']:
